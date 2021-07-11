@@ -7,6 +7,8 @@ import glob
 import os
 from typing import Optional
 
+# This is the old version, use Patch_creater.py instead
+
 
 def Create_DataLoader(data_dir: str ='Data',
                       train_csv_path: str = 'Data/train16.csv',
@@ -77,6 +79,8 @@ class Dataset4DFlowNet(Dataset):
 
         with h5py.File(str(data_dir+'/'+h5_file_name1+'_HR.h5'), 'r') as f:
             # Open the file once per row, Loop through all the LR column
+            self.mask1 = torch.tensor(f[self.mask_colname])
+            self.mask1 = torch.where(self.mask1>=self.mask_threshold, 1., 0.)
             for i in range(3):
                 vol_hr.append(torch.tensor(f[self.hr_colnames[i]]).unsqueeze(0))
         self.vol_hr1 = torch.cat((vol_hr), 0)
@@ -109,6 +113,8 @@ class Dataset4DFlowNet(Dataset):
 
         with h5py.File(str(data_dir+'/'+h5_file_name1+'_HR.h5'), 'r') as f:
             # Open the file once per row, Loop through all the LR column
+            self.mask2 = torch.tensor(f[self.mask_colname])
+            self.mask2 = torch.where(self.mask1>=self.mask_threshold, 1., 0.)
             for i in range(3):
                 vol_hr.append(torch.tensor(f[self.hr_colnames[i]]).unsqueeze(0))
         self.vol_hr2 = torch.cat((vol_hr), 0)
