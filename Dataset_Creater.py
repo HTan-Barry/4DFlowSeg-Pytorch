@@ -17,15 +17,23 @@ class Dataset4DFlowNet(Dataset):
     def __getitem__(self, idx):
         data = np.load(self.data_dir+'data-'+str(idx)+'.npy')
         label = np.load(self.data_dir + 'label-' + str(idx) + '.npy')
+        mask = label[-1]
+        label = label[:-1]
+        mask = np.where(mask==0, 0., 1.)
         data = torch.from_numpy(data)
         label = torch.from_numpy(label)
+        mask = torch.from_numpy(mask)
+        mask = mask.unsqueeze(0)
+        
         data = data.type(torch.FloatTensor)
         label = label.type(torch.FloatTensor)
+        mask = mask.type(torch.FloatTensor)
+
 
         if self.transform:
             data = self.transform(data)
 
-        return (data, label)
+        return (data, label, mask)
 
 if __name__ == '__main__':
     dataset = Dataset4DFlowNet(data_dir='./Data/val/')

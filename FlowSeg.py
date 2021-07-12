@@ -148,5 +148,5 @@ class FlowSeg(nn.Module):
         vy = self.conv_hr_v(out)
         vz = self.conv_hr_w(out)
         mask = self.conv_mask(out)
-        out = torch.cat((vx, vy, vz, mask), dim=1)
-        return out
+        out = torch.cat((vx, vy, vz), dim=1)
+        return (out, mask)

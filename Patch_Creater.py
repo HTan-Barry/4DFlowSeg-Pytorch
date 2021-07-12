@@ -203,19 +203,19 @@ class patch_train():
                         vol_lr = rotate90(vol_lr, rotation_plane, rotation_degree_idx, True)
                         vol_hr = rotate90(vol_hr, rotation_plane, rotation_degree_idx, True)
                         mag = rotate90(mag, rotation_plane, rotation_degree_idx, False)
-                        mask = rotate90(mask, rotation_plane, rotation_degree_idx, True)
+                        mask = rotate90(mask, rotation_plane, rotation_degree_idx, False)
                     elif rotation_degree_idx == 2:
                         # print("180 degrees, plane", plane_nr)
                         vol_lr = rotate180_3d(vol_lr, rotation_plane, True)
                         vol_hr = rotate180_3d(vol_hr, rotation_plane, True)
                         mag = rotate180_3d(mag, rotation_plane, False)
-                        mask = rotate180_3d(mask, rotation_plane, True)
+                        mask = rotate180_3d(mask, rotation_plane, False)
                     elif rotation_degree_idx == 3:
                         # print("270 degrees, plane", plane_nr)
                         vol_lr = rotate90(vol_lr, rotation_plane, rotation_degree_idx, True)
                         vol_hr = rotate90(vol_hr, rotation_plane, rotation_degree_idx, True)
                         mag = rotate90(mag, rotation_plane, rotation_degree_idx, False)
-                        mask = rotate90(mask, rotation_plane, rotation_degree_idx, True)
+                        mask = rotate90(mask, rotation_plane, rotation_degree_idx, False)
             except Exception as e:
                 print("Number: {}, index: {}, rotated: {} \n rotation_plane: {}, degree: {}".format(i, idx, is_rotate,rotation_plane, rotation_degree_idx))
                 print(e)
@@ -458,16 +458,16 @@ def rotate90(arr, plane, k, is_phase_img=True):
 
 
 if __name__ == '__main__':
-    # patch = patch_train(data_csv_dir='./Data/val16.csv',
-    #                     h5_file_name1='aorta03trans',
-    #                     h5_file_name2='aorta02',
-    #                     patch_size=16,
-    #                     root='./Data/train/')
-    # patch.patch_generator()
+    patch = patch_train(data_csv_dir='./Data/val16.csv',
+                        h5_file_name1='aorta03trans',
+                        h5_file_name2='aorta02',
+                        patch_size=16,
+                        root='./Data/val/')
+    patch.patch_generator()
 
-    inference = patch_test(data_dir='./Data',
-                           h5_file_name1='aorta03trans',
-                           res_increase=2,
-                           mask_threshold=0.6,
-                           root='/fastdata/ht21/4DFlowNet-Pytorch/Data/test/')
-    inference.patch_generator()
+    # inference = patch_test(data_dir='./Data',
+    #                        h5_file_name1='aorta03trans',
+    #                        res_increase=2,
+    #                        mask_threshold=0.6,
+    #                        root='/fastdata/ht21/4DFlowNet-Pytorch/Data/test/')
+    # inference.patch_generator()

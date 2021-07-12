@@ -94,7 +94,7 @@ def train_session(batch_size=20,
 
             # network prediction
             outputs = net(data)
-            loss = loss_mse(outputs, label[:-1]) + 1e-2 * loss_div(outputs, label[:-1])
+            loss = loss_mse(outputs, label[:,:-1]) + 1e-2 * loss_div(outputs, label[:,:-1])
 
             # backward propagation
             loss.backward()

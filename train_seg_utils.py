@@ -1,6 +1,7 @@
 import torch
 import warnings
 from torch import optim, nn
+import torch.nn.functional as F
 import time
 import os
 import sys
@@ -21,10 +22,10 @@ def mkdir(path):
     return path
 
 
-def train_session(batch_size=20,
+def train_session(batch_size=4,
                   num_workers=1,
                   epochs=402,
-                  initial_learning_rate=1e-4/(1.414 * 15),
+                  initial_learning_rate=1e-4,
                   res_increase=2,
                   low_resblock=8,
                   hi_resblock=4,
@@ -46,6 +47,7 @@ def train_session(batch_size=20,
 
     # Initialize the network, loss function and Optimizer
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    
     net = FlowSeg(res_increase=res_increase,
                   num_low_res=low_resblock,
                   num_hi_res=hi_resblock,
@@ -60,7 +62,8 @@ def train_session(batch_size=20,
 
     loss_mse = nn.MSELoss()
     loss_div = GradientLoss()
-    loss_ce = nn.CrossEntropyLoss()
+    loss_ce = nn.BCELoss()
+    loss_ce = loss_ce.to(device)
     loss_mse = loss_mse.to(device)
     loss_div = loss_div.to(device)
 
@@ -85,19 +88,22 @@ def train_session(batch_size=20,
         train_loss = []
         val_loss = []
         net.train()
-        for i, (data, label) in enumerate(trainloader, 0):
-
+        for i, (data, label, mask_label) in enumerate(trainloader, 0):
             data = data.to(device)
             label = label.to(device)
+            mask_label = mask_label.to(device)
             if data.shape[-1] != 16 or data.shape[-2] != 16 or data.shape[3] != 16:
                 print(i, data.shape, label.shape)
             # zero the gradient
             optimizer.zero_grad()
 
             # network prediction
-            outputs = net(data)
-            mask_label = label[:, -1].type(torch.LongTensor)
-            loss = loss_mse(outputs[:,:-1], label[:,:-1]) + 1e-2 * loss_div(outputs[:,:-1], label[:,:-1]) + loss_ce(outputs[:,-1], mask_label)
+            outputs, mask = net(data)
+            # print("shape of mask: ", mask_label.shape, "predict mask: ", mask.shape, "target label:", label.shape)
+            
+            loss_spd = loss_mse(outputs, label) + 1e-2 * loss_div(outputs, label)
+            loss_mask = loss_ce(mask, mask_label)
+            loss = loss_spd + loss_mask
 
             # backward propagation
             loss.backward()
@@ -111,7 +117,7 @@ def train_session(batch_size=20,
             ce_loss = loss.item()
             train_loss.append(ce_loss)
             if i % 5 == 0:
-                print('\r[%d, %5d] train loss: %.6f' % (epoch + 1, i + 1, ce_loss), end='', flush=True)
+                print('\r[%d, %5d] train loss: %.6f / %.6f' % (epoch + 1, i + 1, loss_spd.item(), loss_mask.item()), end='', flush=True)
         net.eval()
         for i, (data, label) in enumerate(valloader, 0):
 
