@@ -3,7 +3,8 @@ import warnings
 from torch import optim, nn
 import time
 import os
-from 4DFlowSeg import FlowSeg
+import sys
+from FlowSeg import FlowSeg
 from Gradient_Loss import *
 from Dataset_Creater import *
 
@@ -38,14 +39,14 @@ def train_session(batch_size=20,
     mkdir(path_cp)
 
     # Create the dataset and dataLoader for training, validating
-    trainset = Dataset4DFlowNet(data_dir='../Data/train/')
-    valset = Dataset4DFlowNet(data_dir='../Data/val/')
+    trainset = Dataset4DFlowNet(data_dir='Data/train/')
+    valset = Dataset4DFlowNet(data_dir='Data/val/')
     trainloader = DataLoader(trainset, batch_size=batch_size, num_workers=num_workers, shuffle=True)
     valloader = DataLoader(valset, batch_size=1, num_workers=num_workers, shuffle=False)
 
     # Initialize the network, loss function and Optimizer
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    net = FlowNet(res_increase=res_increase,
+    net = FlowSeg(res_increase=res_increase,
                   num_low_res=low_resblock,
                   num_hi_res=hi_resblock,
                   last_act=last_act)
@@ -95,7 +96,8 @@ def train_session(batch_size=20,
 
             # network prediction
             outputs = net(data)
-            loss = loss_mse(outputs[:,:-1], label[:,:-1]) + 1e-2 * loss_div(outputs[:,:-1], label[:,:-1]) + loss_ce(outputs[:,-1], label[:,-1])
+            mask_label = label[:, -1].type(torch.LongTensor)
+            loss = loss_mse(outputs[:,:-1], label[:,:-1]) + 1e-2 * loss_div(outputs[:,:-1], label[:,:-1]) + loss_ce(outputs[:,-1], mask_label)
 
             # backward propagation
             loss.backward()

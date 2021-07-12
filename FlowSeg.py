@@ -92,7 +92,7 @@ class FlowSeg(nn.Module):
                  num_hi_res: int = 4,
                  last_act='tanh'
                  ):
-        super(FlowNet, self).__init__()
+        super(FlowSeg, self).__init__()
         self.conv_vol = douConv(kernel_size=[3, 3],
                                 in_channel=3,
                                 out_channel=[64, 64],
