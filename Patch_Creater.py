@@ -197,7 +197,6 @@ class patch_train():
             else:
                 raise ValueError('Name of the dataset is wrong')
             # Apply rotation
-            print(vol_hr.shape, mask.shape, vol_lr.shape)
             try:
                 if is_rotate:
                     if rotation_degree_idx == 1:
@@ -244,7 +243,7 @@ class patch_test():
     Preprocessing the data to .npy file
     The .pt file contains:
         data: [6, x, y, z], sequence: pc-mra, mag, speed, vol_x, vol_y, vol_z
-        label: [6, 2x, 2y, 2z],: sequence: vol_x, vol_y, vol_z
+        label: [4, 2x, 2y, 2z],: sequence: vol_x, vol_y, vol_z, mask
     """
 
     # constructor
@@ -336,7 +335,7 @@ class patch_test():
             label[0:3] = self.vol_hr1[i]
             label[3] = self.mask[0]
             np.save(self.root + "data-{}.npy".format(i), data)
-            np.save(self.root + "label-{}.npy".format(i), self.vol_hr1[i])
+            np.save(self.root + "label-{}.npy".format(i), label)
 
 
 def rotate180_3d(arr, plane=1, is_phase_img=True):
@@ -459,8 +458,8 @@ def rotate90(arr, plane, k, is_phase_img=True):
 
 
 if __name__ == '__main__':
-    # patch = patch_train(data_csv_dir='./Data/train16.csv',
-    #                     h5_file_name1='aorta01',
+    # patch = patch_train(data_csv_dir='./Data/val16.csv',
+    #                     h5_file_name1='aorta03trans',
     #                     h5_file_name2='aorta02',
     #                     patch_size=16,
     #                     root='./Data/train/')

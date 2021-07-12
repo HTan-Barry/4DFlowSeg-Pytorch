@@ -39,10 +39,12 @@ def Test_session(net_path=None,
         data = data.to(device)
         label = label.to(device)
 
-
         # network prediction
         pred = net(data)
-        err = rel_err(pred, label)
+        for j in range(3):
+            pred[:, j] = pred[:, j] * label[:, -1]
+            label[:, j] = label[:, j] * label[:, -1]
+        err = rel_err(pred, label[:, :-1])
         print(i, data.shape, label.shape, ' Error: ', err)
         err_list.append(err)
         if i == 70:
@@ -69,8 +71,6 @@ def rel_err(pred, label, epsilon=1e-5):
     # np.save('./Data/test/log/lab_z.npy', lab_z)
     numerator = np.square(pred_x-lab_x)+np.square(pred_y-lab_y)+np.square(pred_z-lab_z)
     denominator = np.square(lab_x)+np.square(lab_y)+np.square(lab_z)
-    mask = np.where(denominator>1e-7, 1, 0)
-    numerator *= mask
     err = np.mean(np.sqrt(numerator) / (np.sqrt(denominator) + epsilon))
 
 
