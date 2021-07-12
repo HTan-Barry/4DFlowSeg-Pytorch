@@ -3,7 +3,7 @@ import warnings
 from torch import optim, nn
 import time
 import os
-from FlowNet_Pytorch import FlowNet
+from 4DFlowSeg import FlowSeg
 from Gradient_Loss import *
 from Dataset_Creater import *
 
@@ -28,18 +28,18 @@ def train_session(batch_size=20,
                   low_resblock=8,
                   hi_resblock=4,
                   last_act='tanh',
-                  log_path='/fastdata/ht21/4DFlowNet-Pytorch/log',
-                  net_path='/fastdata/ht21/4DFlowNet-Pytorch/log/20210526-011140/epoch192.pt',
+                  log_path='../log',
+                  net_path= None,
                   step_size=10000,
                   gamma=0.7071067
                   ):
     time_str = time.strftime("%Y%m%d-%H%M%S", time.localtime())
-    path_cp = '{}/{}'.format(log_path, str(time_str))
+    path_cp = '{}/{}'.format(log_path, str(time_str)+'-seg')
     mkdir(path_cp)
 
     # Create the dataset and dataLoader for training, validating
-    trainset = Dataset4DFlowNet(data_dir='./Data/train/')
-    valset = Dataset4DFlowNet(data_dir='./Data/val/')
+    trainset = Dataset4DFlowNet(data_dir='../Data/train/')
+    valset = Dataset4DFlowNet(data_dir='../Data/val/')
     trainloader = DataLoader(trainset, batch_size=batch_size, num_workers=num_workers, shuffle=True)
     valloader = DataLoader(valset, batch_size=1, num_workers=num_workers, shuffle=False)
 
@@ -59,6 +59,7 @@ def train_session(batch_size=20,
 
     loss_mse = nn.MSELoss()
     loss_div = GradientLoss()
+    loss_ce = nn.CrossEntropyLoss()
     loss_mse = loss_mse.to(device)
     loss_div = loss_div.to(device)
 
@@ -94,7 +95,7 @@ def train_session(batch_size=20,
 
             # network prediction
             outputs = net(data)
-            loss = loss_mse(outputs, label[:-1]) + 1e-2 * loss_div(outputs, label[:-1])
+            loss = loss_mse(outputs[:,:-1], label[:,:-1]) + 1e-2 * loss_div(outputs[:,:-1], label[:,:-1]) + loss_ce(outputs[:,-1], label[:,-1])
 
             # backward propagation
             loss.backward()
