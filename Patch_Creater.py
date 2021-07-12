@@ -76,6 +76,7 @@ class patch_train():
                 v = np.expand_dims(v, 1)
                 vol_hr.append(v)
             self.mask1 = np.array(f[self.mask_colname])
+            self.mask1 = np.where(self.mask1 > self.mask_threshold, 1., 0.)
         self.vol_hr1 = np.concatenate(vol_hr, 1)
 
         print('load HR: finished')
@@ -117,6 +118,7 @@ class patch_train():
                 v = np.expand_dims(v, 1)
                 vol_hr.append(v)
             self.mask2 = np.array(f[self.mask_colname])
+            self.mask2 = np.where(self.mask2 > self.mask_threshold, 1., 0.)
         self.vol_hr2 = np.concatenate(vol_hr, 1)
         print('load HR: finished')
         # Normalization
@@ -128,12 +130,14 @@ class patch_train():
         print('shape for VENC vol: ', self.global_venc1.shape)
         print('shape for Mag vol: ', self.mag1.shape)
         print('shape for HR vol: ', self.vol_hr1.shape)
+        print('shape for mask: ', self.mask1.shape)
 
         print('Data 2:', h5_file_name2)
         print('shape for LR vol: ', self.vol_lr2.shape)
         print('shape for VENC vol: ', self.global_venc2.shape)
         print('shape for Mag vol: ', self.mag2.shape)
         print('shape for HR vol: ', self.vol_hr2.shape)
+        print('shape for mask: ', self.mask2.shape)
 
 
     def patch_generator(self):
@@ -157,7 +161,7 @@ class patch_train():
                          z_start:z_start + patch_size]
                 vol_hr = self.vol_hr1[idx, :, 2*x_start:2*x_start + hr_patch_size, 2*y_start:2*y_start + hr_patch_size,
                          2*z_start:2*z_start + hr_patch_size]
-                mask = self.mask1[0,:,2*x_start:2*x_start + hr_patch_size, 2*y_start:2*y_start + hr_patch_size,
+                mask = self.mask1[0,2*x_start:2*x_start + hr_patch_size, 2*y_start:2*y_start + hr_patch_size,
                          2*z_start:2*z_start + hr_patch_size]
 
                 # Normalization
@@ -170,7 +174,7 @@ class patch_train():
                          z_start:z_start + patch_size]
                 vol_hr = self.vol_hr2[idx, :, 2*x_start:2*x_start + hr_patch_size, 2*y_start:2*y_start + hr_patch_size,
                          2*z_start:2*z_start + hr_patch_size]
-                mask = self.mask1[0,:,2*x_start:2*x_start + hr_patch_size, 2*y_start:2*y_start + hr_patch_size,
+                mask = self.mask2[0,2*x_start:2*x_start + hr_patch_size, 2*y_start:2*y_start + hr_patch_size,
                          2*z_start:2*z_start + hr_patch_size]
                 hr_shape = vol_hr.shape[1:]
                 if not hr_shape[0] == hr_shape[1] == hr_shape[2] == hr_patch_size:
@@ -185,36 +189,38 @@ class patch_train():
             else:
                 raise ValueError('Name of the dataset is wrong')
             # Apply rotation
-            if is_rotate:
-                if rotation_degree_idx == 1:
-                    vol_lr = rotate90(vol_lr, rotation_plane, rotation_degree_idx, True)
-                    vol_hr = rotate90(vol_hr, rotation_plane, rotation_degree_idx, True)
-                    mag = rotate90(mag, rotation_plane, rotation_degree_idx, False)
-                    mask = rotate90(mask, rotation_plane, rotation_degree_idx, False)
-                elif rotation_degree_idx == 2:
-                    # print("180 degrees, plane", plane_nr)
-                    vol_lr = rotate180_3d(vol_lr, rotation_plane, True)
-                    vol_hr = rotate180_3d(vol_hr, rotation_plane, True)
-                    mag = rotate180_3d(mag, rotation_plane, False)
-                    mask = rotate180_3d(mask, rotation_plane, rotation_degree_idx, False)
-                elif rotation_degree_idx == 3:
-                    # print("270 degrees, plane", plane_nr)
-                    vol_lr = rotate90(vol_lr, rotation_plane, rotation_degree_idx, True)
-                    vol_hr = rotate90(vol_hr, rotation_plane, rotation_degree_idx, True)
-                    mag = rotate90(mag, rotation_plane, rotation_degree_idx, False)
-                    mask = rotate90(mask, rotation_plane, rotation_degree_idx, False)
+            # if is_rotate:
+            #     if rotation_degree_idx == 1:
+            #         vol_lr = rotate90(vol_lr, rotation_plane, rotation_degree_idx, True)
+            #         vol_hr = rotate90(vol_hr, rotation_plane, rotation_degree_idx, True)
+            #         mag = rotate90(mag, rotation_plane, rotation_degree_idx, False)
+            #         mask = rotate90(mask, rotation_plane, rotation_degree_idx, True)
+            #     elif rotation_degree_idx == 2:
+            #         # print("180 degrees, plane", plane_nr)
+            #         vol_lr = rotate180_3d(vol_lr, rotation_plane, True)
+            #         vol_hr = rotate180_3d(vol_hr, rotation_plane, True)
+            #         mag = rotate180_3d(mag, rotation_plane, False)
+            #         mask = rotate180_3d(mask, rotation_plane, True)
+            #     elif rotation_degree_idx == 3:
+            #         # print("270 degrees, plane", plane_nr)
+            #         vol_lr = rotate90(vol_lr, rotation_plane, rotation_degree_idx, True)
+            #         vol_hr = rotate90(vol_hr, rotation_plane, rotation_degree_idx, True)
+            #         mag = rotate90(mag, rotation_plane, rotation_degree_idx, False)
+            #         mask = rotate90(mask, rotation_plane, rotation_degree_idx, True)
 
 
-            data = np.zeros(([7] + list(vol_lr.shape[1:])))
+            data = np.zeros(([6] + list(vol_lr.shape[1:])))
+            label = np.zeros(([4] + list(vol_hr.shape[1:])))
             for j in range(3):
                 data[1] = data[1] + mag[j] ** 2
                 data[2] = data[2] + vol_lr[j] ** 2
             data[1:3] = np.sqrt(data[1:3])
             data[0] = data[1] * data[2]
-            data[3:5] = vol_lr
-            data[6] = mask
+            data[3:6] = vol_lr
+            label[0:3] = vol_hr
+            label[3] = mask
             np.save(self.root + "data-{}.npy".format(i), data)
-            np.save(self.root + "label-{}.npy".format(i), vol_hr)
+            np.save(self.root + "label-{}.npy".format(i), label)
 
 
 class patch_test():
@@ -425,6 +431,7 @@ def rotate90(arr, plane, k, is_phase_img=True):
         return arr
 
     # Do the 90 or 270 deg rotation
+    print(plane, k, ax)
     arr[0] = np.rot90(arr[0], k=k, axes=ax)
     arr[1] = np.rot90(arr[1], k=k, axes=ax)
     arr[2] = np.rot90(arr[2], k=k, axes=ax)
@@ -433,16 +440,16 @@ def rotate90(arr, plane, k, is_phase_img=True):
 
 
 if __name__ == '__main__':
-    # patch = patch_train(data_csv_dir='./Data/train16.csv',
-    #                     h5_file_name1='aorta01',
-    #                     h5_file_name2='aorta02',
-    #                     patch_size=16,
-    #                     root='./Data/train/')
-    # patch.patch_generator()
+    patch = patch_train(data_csv_dir='./Data/train16.csv',
+                        h5_file_name1='aorta01',
+                        h5_file_name2='aorta02',
+                        patch_size=16,
+                        root='./Data/train/')
+    patch.patch_generator()
 
-    inference = patch_test(data_dir='./Data',
-                           h5_file_name1='aorta03trans',
-                           res_increase=2,
-                           mask_threshold=0.6,
-                           root='/fastdata/ht21/4DFlowNet-Pytorch/Data/test/')
-    inference.patch_generator()
+    # inference = patch_test(data_dir='./Data',
+    #                        h5_file_name1='aorta03trans',
+    #                        res_increase=2,
+    #                        mask_threshold=0.6,
+    #                        root='/fastdata/ht21/4DFlowNet-Pytorch/Data/test/')
+    # inference.patch_generator()
