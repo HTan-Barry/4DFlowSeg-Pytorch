@@ -79,7 +79,9 @@ class patch_train():
                 v = np.array(f[self.lr_colnames[i]])
                 v = np.expand_dims(v, 1)
                 vol_hr.append(v)
+
                 self.mask1[i] = mask1[0]
+
 
         self.vol_hr1 = np.concatenate(vol_hr, 1)
 
@@ -124,8 +126,8 @@ class patch_train():
                 v = np.array(f[self.lr_colnames[i]])
                 v = np.expand_dims(v, 1)
                 vol_hr.append(v)
-                self.mask2[i] = mask2[0]
 
+                self.mask2[i] = mask2[0]
 
         self.vol_hr2 = np.concatenate(vol_hr, 1)
         print('load HR: finished')
@@ -169,7 +171,9 @@ class patch_train():
                          z_start:z_start + patch_size]
                 vol_hr = self.vol_hr1[idx, :, 2*x_start:2*x_start + hr_patch_size, 2*y_start:2*y_start + hr_patch_size,
                          2*z_start:2*z_start + hr_patch_size]
+
                 mask = self.mask1[:,2*x_start:2*x_start + hr_patch_size, 2*y_start:2*y_start + hr_patch_size,
+
                          2*z_start:2*z_start + hr_patch_size]
 
                 # Normalization
@@ -182,7 +186,9 @@ class patch_train():
                          z_start:z_start + patch_size]
                 vol_hr = self.vol_hr2[idx, :, 2*x_start:2*x_start + hr_patch_size, 2*y_start:2*y_start + hr_patch_size,
                          2*z_start:2*z_start + hr_patch_size]
+
                 mask = self.mask2[:,2*x_start:2*x_start + hr_patch_size, 2*y_start:2*y_start + hr_patch_size,
+
                          2*z_start:2*z_start + hr_patch_size]
                 hr_shape = vol_hr.shape[1:]
                 if not hr_shape[0] == hr_shape[1] == hr_shape[2] == hr_patch_size:
@@ -197,6 +203,7 @@ class patch_train():
             else:
                 raise ValueError('Name of the dataset is wrong')
             # Apply rotation
+
             try:
                 if is_rotate:
                     if rotation_degree_idx == 1:
@@ -223,6 +230,7 @@ class patch_train():
 
 
 
+
             data = np.zeros(([6] + list(vol_lr.shape[1:])))
             label = np.zeros(([4] + list(vol_hr.shape[1:])))
             for j in range(3):
@@ -232,9 +240,9 @@ class patch_train():
             data[0] = data[1] * data[2]
             data[3:6] = vol_lr
             label[0:3] = vol_hr
+
             label[3] = mask[0]
-            np.save(self.root + "data-{}.npy".format(i), data)
-            np.save(self.root + "label-{}.npy".format(i), label)
+
 
 
 class patch_test():
@@ -450,6 +458,7 @@ def rotate90(arr, plane, k, is_phase_img=True):
         return arr
 
     # Do the 90 or 270 deg rotation
+    print(plane, k, ax)
     arr[0] = np.rot90(arr[0], k=k, axes=ax)
     arr[1] = np.rot90(arr[1], k=k, axes=ax)
     arr[2] = np.rot90(arr[2], k=k, axes=ax)
