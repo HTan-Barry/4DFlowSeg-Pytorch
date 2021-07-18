@@ -119,14 +119,15 @@ def train_session(batch_size=4,
             if i % 5 == 0:
                 print('\r[%d, %5d] train loss: %.6f / %.6f' % (epoch + 1, i + 1, loss_spd.item(), loss_mask.item()), end='', flush=True)
         net.eval()
-        for i, (data, label) in enumerate(valloader, 0):
+        for i, (data, label, mask_label) in enumerate(valloader, 0):
 
             data = data.to(device)
             label = label.to(device)
+            mask_label = mask_label.to(device)
 
             # network prediction
-            pred = net(data)
-            err = loss_mse(pred, label) + 1e-3 * loss_div(pred, label)
+            pred, mask = net(data)
+            err = loss_mse(pred, label) + 1e-3 * loss_div(pred, label) + loss_ce(mask, mask_label)
 
             ce_err = err.item()
             val_loss.append(ce_err)

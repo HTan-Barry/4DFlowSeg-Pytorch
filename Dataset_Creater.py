@@ -24,10 +24,12 @@ class Dataset4DFlowNet(Dataset):
         label = torch.from_numpy(label)
         mask = torch.from_numpy(mask)
         mask = mask.unsqueeze(0)
+
         
         data = data.type(torch.FloatTensor)
         label = label.type(torch.FloatTensor)
         mask = mask.type(torch.FloatTensor)
+
 
 
         if self.transform:

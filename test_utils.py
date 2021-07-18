@@ -11,13 +11,17 @@ from Gradient_Loss import *
 from Dataset_Creater import *
 
 def Test_session(net_path=None,
-                 data_dir='./Data/test/'):
+                 data_dir='./Data/test/',
+                 epsilon = 1e-5,
+                 save_image=False,
+                 save_root_path='inference/mask-0_6',
+                 ):
     # Create the dataset and dataLoader for testing
     testset = Dataset4DFlowNet(data_dir=data_dir)
-    testloader = DataLoader(testset, batch_size=1, num_workers=1, shuffle=False)
+    # testloader = DataLoader(testset, batch_size=1, num_workers=1, shuffle=False)
 
     # Initialize the network, loss function and Optimizer
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    # device = 'cuda' if torch.cuda.is_available() else 'cpu'
     device = 'cpu'
     net = FlowNet()
     net = net.to(device)
@@ -32,30 +36,36 @@ def Test_session(net_path=None,
 
     # Inference
     err_list = []
-    for i, (data, label) in enumerate(testset, 0):
-        net.eval()
+    net.eval()
+    num_sample = len(testset)
+    for i, (data, label, mask) in enumerate(testset, 0):
+        if i >= num_sample:
+            break
         data = data.unsqueeze(0)
         label = label.unsqueeze(0)
+        mask = mask.unsqueeze(0)
         data = data.to(device)
         label = label.to(device)
+        mask = mask.to(device)
+
 
         # network prediction
         pred = net(data)
         for j in range(3):
-            pred[:, j] = pred[:, j] * label[:, -1]
-            label[:, j] = label[:, j] * label[:, -1]
-        err = rel_err(pred, label[:, :-1])
+            pred[:, j] = pred[:, j] * mask
+            label[:, j] = label[:, j] * mask
+        err = rel_err(pred=pred, label=label, epsilon=epsilon,
+        is_save_image=save_image, save_root_path=save_root_path)
         print(i, data.shape, label.shape, ' Error: ', err)
         err_list.append(err)
-        if i == 70:
-            np.savetxt('test.csv', np.array(err_list), delimiter=',')
+    np.savetxt('test.csv', np.array(err_list), delimiter=',')
     for idx in range(0,len(err_list),10):
         print('Mean error at frame {} to {}: {}'.format(idx+1, idx+11, np.mean(err_list[idx:idx+10])))
     print('Mean error at frame {} to {}: {}'.format('71', len(err_list), err_list[-1]))
 
 
 
-def rel_err(pred, label, epsilon=1e-5):
+def rel_err(pred, label, epsilon, is_save_image, save_root_path):
     '''
     pred: predicted result, size: (3, x, y, z)
     label: ref result, size: (3, x, y, z)
@@ -63,12 +73,13 @@ def rel_err(pred, label, epsilon=1e-5):
     '''
     pred_x, pred_y, pred_z = pred[:,0,:,:,:].detach().numpy(), pred[:,1,:,:,:].detach().numpy(), pred[:,2,:,:,:].detach().numpy()
     lab_x, lab_y, lab_z = label[:,0,:,:,:].detach().numpy(), label[:,1,:,:,:].detach().numpy(), label[:,2,:,:,:].detach().numpy()
-    # np.save('./Data/test/log/pred_x.npy', pred_x)
-    # np.save('./Data/test/log/pred_y.npy', pred_y)
-    # np.save('./Data/test/log/pred_z.npy', pred_z)
-    # np.save('./Data/test/log/lab_x.npy', lab_x)
-    # np.save('./Data/test/log/lab_y.npy', lab_y)
-    # np.save('./Data/test/log/lab_z.npy', lab_z)
+    if is_save_image:
+        np.save(save_root_path+'/pred_x.npy', pred_x)
+        np.save(save_root_path+'/pred_y.npy', pred_y)
+        np.save(save_root_path+'/pred_z.npy', pred_z)
+        np.save(save_root_path+'/lab_x.npy', lab_x)
+        np.save(save_root_path+'/lab_y.npy', lab_y)
+        np.save(save_root_path+'/lab_z.npy', lab_z)
     numerator = np.square(pred_x-lab_x)+np.square(pred_y-lab_y)+np.square(pred_z-lab_z)
     denominator = np.square(lab_x)+np.square(lab_y)+np.square(lab_z)
     err = np.mean(np.sqrt(numerator) / (np.sqrt(denominator) + epsilon))
@@ -78,4 +89,4 @@ def rel_err(pred, label, epsilon=1e-5):
 
 if __name__ == '__main__':
     Test_session(net_path='/fastdata/ht21/4DFlowNet-Pytorch/log/20210527-115011/epoch402.pt',
-                 data_dir='./Data/test/')
+                 data_dir='./Data/test/', save_image=True)

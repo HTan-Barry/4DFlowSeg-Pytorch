@@ -458,16 +458,16 @@ def rotate90(arr, plane, k, is_phase_img=True):
 
 
 if __name__ == '__main__':
-    patch = patch_train(data_csv_dir='./Data/val16.csv',
-                        h5_file_name1='aorta03trans',
-                        h5_file_name2='aorta02',
-                        patch_size=16,
-                        root='./Data/val/')
-    patch.patch_generator()
+    # patch = patch_train(data_csv_dir='./Data/val16.csv',
+    #                     h5_file_name1='aorta03trans',
+    #                     h5_file_name2='aorta02',
+    #                     patch_size=16,
+    #                     root='./Data/val/')
+    # patch.patch_generator()
 
-    # inference = patch_test(data_dir='./Data',
-    #                        h5_file_name1='aorta03trans',
-    #                        res_increase=2,
-    #                        mask_threshold=0.6,
-    #                        root='/fastdata/ht21/4DFlowNet-Pytorch/Data/test/')
-    # inference.patch_generator()
+    inference = patch_test(data_dir='./Data',
+                           h5_file_name1='aorta03trans',
+                           res_increase=2,
+                           mask_threshold=0.6,
+                           root='/fastdata/ht21/4DFlowNet-Pytorch/Data/test/')
+    inference.patch_generator()
