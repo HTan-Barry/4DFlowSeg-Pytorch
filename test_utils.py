@@ -55,7 +55,7 @@ def Test_session(net_path=None,
             pred[:, j] = pred[:, j] * mask
             label[:, j] = label[:, j] * mask
         err = rel_err(pred=pred, label=label, epsilon=epsilon,
-        is_save_image=save_image, save_root_path=save_root_path)
+        is_save_image=save_image, save_root_path=save_root_path, idx=i)
         print(i, data.shape, label.shape, ' Error: ', err)
         err_list.append(err)
     np.savetxt('test.csv', np.array(err_list), delimiter=',')
@@ -65,7 +65,7 @@ def Test_session(net_path=None,
 
 
 
-def rel_err(pred, label, epsilon, is_save_image, save_root_path):
+def rel_err(pred, label, epsilon, is_save_image, save_root_path, idx):
     '''
     pred: predicted result, size: (3, x, y, z)
     label: ref result, size: (3, x, y, z)
@@ -74,12 +74,12 @@ def rel_err(pred, label, epsilon, is_save_image, save_root_path):
     pred_x, pred_y, pred_z = pred[:,0,:,:,:].detach().numpy(), pred[:,1,:,:,:].detach().numpy(), pred[:,2,:,:,:].detach().numpy()
     lab_x, lab_y, lab_z = label[:,0,:,:,:].detach().numpy(), label[:,1,:,:,:].detach().numpy(), label[:,2,:,:,:].detach().numpy()
     if is_save_image:
-        np.save(save_root_path+'/pred_x.npy', pred_x)
-        np.save(save_root_path+'/pred_y.npy', pred_y)
-        np.save(save_root_path+'/pred_z.npy', pred_z)
-        np.save(save_root_path+'/lab_x.npy', lab_x)
-        np.save(save_root_path+'/lab_y.npy', lab_y)
-        np.save(save_root_path+'/lab_z.npy', lab_z)
+        np.save(save_root_path+'/{}_pred_x.npy'.format(idx), pred_x)
+        np.save(save_root_path+'/{}_pred_y.npy'.format(idx), pred_y)
+        np.save(save_root_path+'/{}_pred_z.npy'.format(idx), pred_z)
+        np.save(save_root_path+'/{}_lab_x.npy'.format(idx), lab_x)
+        np.save(save_root_path+'/{}_lab_y.npy'.format(idx), lab_y)
+        np.save(save_root_path+'/{}_lab_z.npy'.format(idx), lab_z)
     numerator = np.square(pred_x-lab_x)+np.square(pred_y-lab_y)+np.square(pred_z-lab_z)
     denominator = np.square(lab_x)+np.square(lab_y)+np.square(lab_z)
     err = np.mean(np.sqrt(numerator) / (np.sqrt(denominator) + epsilon))
