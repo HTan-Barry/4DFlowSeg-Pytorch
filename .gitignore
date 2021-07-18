@@ -3,3 +3,5 @@
 /__pycache__
 /Data_prep.py
 /inference
+/log
+data.zip
