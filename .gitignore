@@ -1,7 +1,5 @@
-/.Train.py.swp
-/Data
 /log
+/Data
 /__pycache__
 /Data_prep.py
 /inference
-/log
