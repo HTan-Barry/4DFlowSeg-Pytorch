@@ -1,10 +1,6 @@
 # 4DFlowSeg
 
-This work is modified by 4DFlowNet project created by: Edward et al. (2020)
-
->GitHub: https://github.com/EdwardFerdian/4DFlowNet
->
->Original paper: https://doi.org/10.3389/fphy.2020.00138
+This work is modified by 4DFlowNet project created by: Edward et al. (2020). [GitHub](https://github.com/EdwardFerdian/4DFlowNet), [Paper](https://doi.org/10.3389/fphy.2020.00138)
 
 ## 1. Installation
 
@@ -39,7 +35,29 @@ conda env create -f environment.yaml
 ```
 
 ## 2. Dataset
+To prepare training or validation dataset, we assume a High resolution CFD dataset is available. As an example we have provided this under ```/data/example_data_HR.h5```
+
+### 2.1 Create lower Dataset
+
+```
+python prepare_lowres_dataset.py
+```
+
+### 2.2 Create batch data
+
+```
+bash scripts/create_batch.sh
+```
+
 
 ## 3. Training session
 
+```
+bash scripts/train.sh
+```
+
 ## 4. Testing session and inference
+
+```
+bash scripts/test.sh
+```

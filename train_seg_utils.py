@@ -5,9 +5,11 @@ import torch.nn.functional as F
 import time
 import os
 import sys
+import pandas as pd
 from FlowSeg import FlowSeg
 from Gradient_Loss import *
 from Dataset_Creater import *
+from DiceLoss import DiceLoss, FocalLoss
 
 
 def mkdir(path):
@@ -21,8 +23,17 @@ def mkdir(path):
 
     return path
 
+def dice_coeff(pred, target):
+    smooth = 1.
+    num = pred.size(0)
+    m1 = pred.view(num, -1)  # Flatten
+    m2 = target.view(num, -1)  # Flatten
+    intersection = (m1 * m2).sum()
+ 
+    return (2. * intersection + smooth) / (m1.sum() + m2.sum() + smooth)
 
-def train_session(batch_size=4,
+def train_session(model_name,
+                  batch_size=40,
                   num_workers=1,
                   epochs=402,
                   initial_learning_rate=1e-4,
@@ -30,13 +41,13 @@ def train_session(batch_size=4,
                   low_resblock=8,
                   hi_resblock=4,
                   last_act='tanh',
-                  log_path='../log',
+                  log_path='../checkpoints',
                   net_path= None,
                   step_size=10000,
-                  gamma=0.7071067
+                  gamma=0.7071067,
+                  loss = "CE"
                   ):
-    time_str = time.strftime("%Y%m%d-%H%M%S", time.localtime())
-    path_cp = '{}/{}'.format(log_path, str(time_str)+'-seg')
+    path_cp = '{}/{}'.format(log_path, model_name+'-seg')
     mkdir(path_cp)
 
     # Create the dataset and dataLoader for training, validating
@@ -62,7 +73,13 @@ def train_session(batch_size=4,
 
     loss_mse = nn.MSELoss()
     loss_div = GradientLoss()
-    loss_ce = nn.BCELoss()
+
+    if loss == "CE":
+        loss_ce = nn.BCELoss()
+    elif loss == "DICE":
+        loss_ce = DiceLoss()
+    elif loss == "FO":
+        loss_ce = FocalLoss()
     loss_ce = loss_ce.to(device)
     loss_mse = loss_mse.to(device)
     loss_div = loss_div.to(device)
@@ -84,9 +101,11 @@ def train_session(batch_size=4,
     print('Num of Epoch: ', epochs)
     print("Network:", net)
     print("Initialize lr: ", optimizer.param_groups[0]["lr"])
+    train_loss = []
+    val_loss = []
+    dice = []
     for epoch in range(start, epochs):
-        train_loss = []
-        val_loss = []
+
         net.train()
         for i, (data, label, mask_label) in enumerate(trainloader, 0):
             data = data.to(device)
@@ -127,12 +146,15 @@ def train_session(batch_size=4,
 
             # network prediction
             pred, mask = net(data)
-            err = loss_mse(pred, label) + 1e-3 * loss_div(pred, label) + loss_ce(mask, mask_label)
+            err = loss_mse(pred, label) + 1e-3 * loss_div(pred, label)
+
+            dice_val = dice_coeff(mask, mask_label).item()
 
             ce_err = err.item()
             val_loss.append(ce_err)
+            dice.append(dice_val)
             if i % 10 == 0:
-                print('\r[%d, %5d] test loss: %.6f' % (epoch + 1, i + 1, ce_err), end='', flush=True)
+                print('\r[%d, %5d] speed error: %.6f; dice for mask: %.3f' % (epoch + 1, i + 1, ce_err, dice), end='', flush=True)
         print('\repoch: {}, lr: {} average loss: train {:.6f}, val {:.6f}'.format(epoch + 1,
                                                                                   lr,
                                                                                   np.mean(train_loss),
@@ -146,7 +168,14 @@ def train_session(batch_size=4,
                         'scheduler': scheduler.state_dict(),
                         },
                        '{}/epoch{}.pt'.format(path_cp, str(epoch + 1)))
-
+    log = {
+        "train_loss": train_loss,
+        "val_loss": val_loss,
+        "val_dice": dice
+        }
+    log = pd.DataFrame(log)
+    log.to_csv("{}.csv".format(model_name))
+    
 
 if __name__ == "__main__":
     train_session()
