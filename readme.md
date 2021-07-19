@@ -37,3 +37,9 @@ If you already install conda:
 ```bash
 conda env create -f environment.yaml
 ```
+
+## 2. Dataset
+
+## 3. Training session
+
+## 4. Testing session and inference
