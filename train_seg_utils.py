@@ -174,9 +174,9 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_tanh_CE_V1",
                         },
                        '{}/epoch{}.pt'.format(path_cp, str(epoch + 1)))
     log = {
-        "train_loss": train_loss,
-        "val_loss": val_loss,
-        "val_dice": dice
+        "train_loss": train_loss_mean,
+        "val_loss": val_loss_mean,
+        "val_dice": dice_mean
         }
     log = pd.DataFrame(log)
     log.to_csv("log/{}.csv".format(model_name))
