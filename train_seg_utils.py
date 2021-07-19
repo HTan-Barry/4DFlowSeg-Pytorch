@@ -9,7 +9,7 @@ import pandas as pd
 from FlowSeg import FlowSeg
 from Gradient_Loss import *
 from Dataset_Creater import *
-from DiceLoss import DiceLoss, FocalLoss
+from Loss import DiceLoss, FocalLoss
 
 
 def mkdir(path):
@@ -32,7 +32,7 @@ def dice_coeff(pred, target):
  
     return (2. * intersection + smooth) / (m1.sum() + m2.sum() + smooth)
 
-def train_session(model_name,
+def train_session(model_name="FlowSeg_lr0.0001_step10000_tanh_CE_V1",
                   batch_size=40,
                   num_workers=1,
                   epochs=402,
@@ -101,11 +101,13 @@ def train_session(model_name,
     print('Num of Epoch: ', epochs)
     print("Network:", net)
     print("Initialize lr: ", optimizer.param_groups[0]["lr"])
-    train_loss = []
-    val_loss = []
-    dice = []
+    train_loss_mean = []
+    val_loss_mean = []
+    dice_mean = []
     for epoch in range(start, epochs):
-
+        train_loss = []
+        val_loss = []
+        dice = []
         net.train()
         for i, (data, label, mask_label) in enumerate(trainloader, 0):
             data = data.to(device)
@@ -146,7 +148,7 @@ def train_session(model_name,
 
             # network prediction
             pred, mask = net(data)
-            err = loss_mse(pred, label) + 1e-3 * loss_div(pred, label)
+            err = loss_mse(pred, label) + 1e-3 * loss_div(pred, label) + loss_ce(mask, mask_label)
 
             dice_val = dice_coeff(mask, mask_label).item()
 
@@ -154,11 +156,14 @@ def train_session(model_name,
             val_loss.append(ce_err)
             dice.append(dice_val)
             if i % 10 == 0:
-                print('\r[%d, %5d] speed error: %.6f; dice for mask: %.3f' % (epoch + 1, i + 1, ce_err, dice), end='', flush=True)
-        print('\repoch: {}, lr: {} average loss: train {:.6f}, val {:.6f}'.format(epoch + 1,
+                print('\r[%d, %5d] speed error: %.6f; dice for mask: %.3f' % (epoch + 1, i + 1, ce_err, dice_val), end='', flush=True)
+        train_loss_mean.append(np.mean(train_loss))
+        val_loss_mean.append(np.mean(val_loss))
+        dice_mean.append(np.mean(dice))
+        print('\repoch: {}, lr: {} average loss: train {:.6f}, val {:.6f}, dice {:.6f}'.format(epoch + 1,
                                                                                   lr,
                                                                                   np.mean(train_loss),
-                                                                                  np.mean(val_loss)),
+                                                                                  np.mean(val_loss), np.mean(dice)),
               end='\n')
         if epoch % 10 == 1:
             # Save the Network
@@ -174,7 +179,7 @@ def train_session(model_name,
         "val_dice": dice
         }
     log = pd.DataFrame(log)
-    log.to_csv("{}.csv".format(model_name))
+    log.to_csv("log/{}.csv".format(model_name))
     
 
 if __name__ == "__main__":
