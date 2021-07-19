@@ -10,7 +10,6 @@ This work is modified by 4DFlowNet project created by: Edward et al. (2020)
 
 The code has been tested in:
 >Python 3.6
-
 >Pytorch 1.7
 
 A virtual environment is recommend to created.
