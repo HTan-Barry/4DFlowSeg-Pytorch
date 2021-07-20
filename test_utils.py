@@ -46,9 +46,7 @@ def Test_session(net_path=None,
         data = data.unsqueeze(0)
         label = label.unsqueeze(0)
         mask = mask.unsqueeze(0)
-        data = data.to(device)
-        label = label.to(device)
-        mask = mask.to(device)
+
 
 
         # network prediction

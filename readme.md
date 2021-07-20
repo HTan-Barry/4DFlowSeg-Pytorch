@@ -46,18 +46,25 @@ python prepare_lowres_dataset.py
 ### 2.2 Create batch data
 
 ```
-bash scripts/create_batch.sh
+bash scripts/create_dataset.sh
 ```
 
+The parameters in create_dataset.sh:
+
+>dataset: type od dataset (training, validating, testing)
+>
+>mask_list: all of the setting of the mask threshold
 
 ## 3. Training session
 
 ```
 bash scripts/train.sh
+
+bash scripts/train_seg.sh
 ```
 
 ## 4. Testing session and inference
 
 ```
-bash scripts/test.sh
+bash scripts/inference.sh
 ```
