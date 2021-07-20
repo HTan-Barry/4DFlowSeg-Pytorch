@@ -3,6 +3,7 @@ import h5py
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 import traceback
+import argparse
 
 
 class patch_train():
@@ -458,16 +459,33 @@ def rotate90(arr, plane, k, is_phase_img=True):
 
 
 if __name__ == '__main__':
-    # patch = patch_train(data_csv_dir='./Data/val16.csv',
-    #                     h5_file_name1='aorta03trans',
-    #                     h5_file_name2='aorta02',
-    #                     patch_size=16,
-    #                     root='./Data/val/')
-    # patch.patch_generator()
-
-    inference = patch_test(data_dir='./Data',
-                           h5_file_name1='aorta03trans',
-                           res_increase=2,
-                           mask_threshold=0.6,
-                           root='/fastdata/ht21/4DFlowNet-Pytorch/Data/test/')
-    inference.patch_generator()
+    parser = argparse.ArgumentParser(description="Sample Creater")
+    parser.add_argument("--dataset", type=str, default="training")
+    parser.add_argument("--data_csv_dir", type=str, default="./Data/train16.csv")
+    parser.add_argument("--data_dir", type=str, default='./Data')
+    parser.add_argument("--h5_file_name1", type=str, default="aorta01")
+    parser.add_argument("--h5_file_name2", type=str, default="aorta02")
+    parser.add_argument("--size", type=int, default=16)
+    parser.add_argument("--res_increase", type=int, default=2)
+    parser.add_argument("--mask_threshold", type=float, default=0.6)
+    parser.add_argument("--root", type=str, default="./Data/train/")
+    args = parser.parse_args()
+    
+    if args.dataset == 'training' or args.dataset == 'validating':
+        patch = patch_train(data_csv_dir=args.data_csv_dir,
+                            h5_file_name1=args.h5_file_name1,
+                            h5_file_name2=args.h5_file_name2,
+                            patch_size=args.size,
+                            res_increase=args.res_increase,
+                            mask_threshold=args.mask_threshold,
+                            root=args.root)
+        patch.patch_generator()
+    elif args.dataset == 'testing':
+        inference = patch_test(data_dir=args.data_dir,
+                            h5_file_name1=args.h5_file_name1,
+                            res_increase=args.res_increase,
+                            mask_threshold=args.mask_threshold,
+                            root=args.root)
+        inference.patch_generator()
+    else: 
+        raise Exception("Wrong input of the name of dataset")

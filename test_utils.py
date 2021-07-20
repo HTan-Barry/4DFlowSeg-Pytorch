@@ -9,12 +9,14 @@ from FlowNet_Pytorch import FlowNet
 from Data_prep import Create_DataLoader
 from Gradient_Loss import *
 from Dataset_Creater import *
+import argparse
 
 def Test_session(net_path=None,
                  data_dir='./Data/test/',
                  epsilon = 1e-5,
                  save_image=False,
                  save_root_path='inference/mask-0_6',
+                 csv_dir="./log/4DFlowNetV1_epoch_402_mask_0.6"
                  ):
     # Create the dataset and dataLoader for testing
     testset = Dataset4DFlowNet(data_dir=data_dir)
@@ -58,7 +60,7 @@ def Test_session(net_path=None,
         is_save_image=save_image, save_root_path=save_root_path, idx=i)
         print(i, data.shape, label.shape, ' Error: ', err)
         err_list.append(err)
-    np.savetxt('test.csv', np.array(err_list), delimiter=',')
+    np.savetxt('{}.csv'.format(csv_dir), np.array(err_list), delimiter=',')
     for idx in range(0,len(err_list),10):
         print('Mean error at frame {} to {}: {}'.format(idx+1, idx+11, np.mean(err_list[idx:idx+10])))
     print('Mean error at frame {} to {}: {}'.format('71', len(err_list), err_list[-1]))
@@ -88,5 +90,13 @@ def rel_err(pred, label, epsilon, is_save_image, save_root_path, idx):
     return err
 
 if __name__ == '__main__':
-    Test_session(net_path='/fastdata/ht21/4DFlowNet-Pytorch/log/20210527-115011/epoch402.pt',
-                 data_dir='./Data/test/', save_image=True)
+    parser = argparse.ArgumentParser(description="Inference")
+    parser.add_argument("--checkpoint", type=str, default='./checkpoints/4DFlowNetV1/epoch402.pt')
+    parser.add_argument("--data_dir", type=str, default='./Data/test_mask_0.6/')
+    parser.add_argument("--save_image", type=bool, default=False)
+    parser.add_argument("--csv_dir", type=str)
+    args = parser.parse_args()
+    Test_session(net_path=args.checkpoint,
+                 data_dir=args.data_dir, 
+                 save_image=args.save_image, 
+                 csv_dir=args.csv_dir)
