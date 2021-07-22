@@ -29,7 +29,7 @@ class douConv(nn.Module):
                                padding_mode=padding_mode)
         self.act = act
         if act == 'relu':
-            self.act2 = nn.LeakyReLU()
+            self.act2 = nn.ReLU()
         elif act == 'tanh' or act is None:
             self.act2 = nn.Tanh()
         elif act == 'LeakyReLU':

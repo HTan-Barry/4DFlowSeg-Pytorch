@@ -1,6 +1,8 @@
 /checkpoints/
-/Data
-/__pycache__
+/Data/
+/__pycache__/
 /Data_prep.py
-/inference
+/inference/
 data.zip
+/result/
+/log/

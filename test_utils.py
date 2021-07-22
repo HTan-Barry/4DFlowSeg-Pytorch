@@ -16,9 +16,11 @@ def Test_session(net_path=None,
                  epsilon = 1e-5,
                  save_image=False,
                  save_root_path='inference/mask-0_6',
-                 csv_dir="./log/4DFlowNetV1_epoch_402_mask_0.6"
+                 csv_dir="./log/4DFlowNetV1_epoch_402_mask_0.6",
+                 img_dir="./log/4DFlowNetV1_epoch_402"
                  ):
     # Create the dataset and dataLoader for testing
+    print(save_image)
     testset = Dataset4DFlowNet(data_dir=data_dir)
     # testloader = DataLoader(testset, batch_size=1, num_workers=1, shuffle=False)
 
@@ -40,25 +42,24 @@ def Test_session(net_path=None,
     err_list = []
     net.eval()
     num_sample = len(testset)
-    for i, (data, label, mask) in enumerate(testset, 0):
-        if i >= num_sample:
-            break
+    print(num_sample)
+    for i, (data, label, _) in enumerate(testset, 0):
         data = data.unsqueeze(0)
         label = label.unsqueeze(0)
-        mask = mask.unsqueeze(0)
+        # mask = mask.unsqueeze(0)
 
 
 
         # network prediction
         pred = net(data)
-        for j in range(3):
-            pred[:, j] = pred[:, j] * mask
-            label[:, j] = label[:, j] * mask
+
         err = rel_err(pred=pred, label=label, epsilon=epsilon,
-        is_save_image=save_image, save_root_path=save_root_path, idx=i)
+        is_save_image=save_image, save_root_path=img_dir, idx=i)
         print(i, data.shape, label.shape, ' Error: ', err)
         err_list.append(err)
-    np.savetxt('{}.csv'.format(csv_dir), np.array(err_list), delimiter=',')
+        if i >= (num_sample-1):
+            break
+    # np.savetxt('{}.csv'.format(csv_dir), np.array(err_list), delimiter=',')
     for idx in range(0,len(err_list),10):
         print('Mean error at frame {} to {}: {}'.format(idx+1, idx+11, np.mean(err_list[idx:idx+10])))
     print('Mean error at frame {} to {}: {}'.format('71', len(err_list), err_list[-1]))
@@ -68,7 +69,7 @@ def Test_session(net_path=None,
 def rel_err(pred, label, epsilon, is_save_image, save_root_path, idx):
     '''
     pred: predicted result, size: (3, x, y, z)
-    label: ref result, size: (3, x, y, z)
+    label: ref result, size: (4, x, y, z)
     Equation of relative error:
     '''
     pred_x, pred_y, pred_z = pred[:,0,:,:,:].detach().numpy(), pred[:,1,:,:,:].detach().numpy(), pred[:,2,:,:,:].detach().numpy()
@@ -93,8 +94,10 @@ if __name__ == '__main__':
     parser.add_argument("--data_dir", type=str, default='./Data/test_mask_0.6/')
     parser.add_argument("--save_image", type=bool, default=False)
     parser.add_argument("--csv_dir", type=str)
+    parser.add_argument("--img_dir", type=str)
     args = parser.parse_args()
     Test_session(net_path=args.checkpoint,
                  data_dir=args.data_dir, 
                  save_image=args.save_image, 
-                 csv_dir=args.csv_dir)
+                 csv_dir=args.csv_dir,
+                 img_dir=args.img_dir)

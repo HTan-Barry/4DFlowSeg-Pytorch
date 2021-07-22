@@ -41,7 +41,7 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_tanh_CE_V1",
                   low_resblock=8,
                   hi_resblock=4,
                   last_act='tanh',
-                  log_path='../checkpoints',
+                  log_path='./checkpoints',
                   net_path= None,
                   step_size=10000,
                   gamma=0.7071067,
@@ -173,13 +173,13 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_tanh_CE_V1",
                         'scheduler': scheduler.state_dict(),
                         },
                        '{}/epoch{}.pt'.format(path_cp, str(epoch + 1)))
-    log = {
-        "train_loss": train_loss_mean,
-        "val_loss": val_loss_mean,
-        "val_dice": dice_mean
-        }
-    log = pd.DataFrame(log)
-    log.to_csv("log/{}.csv".format(model_name))
+        log = {
+            "train_loss": train_loss_mean,
+            "val_loss": val_loss_mean,
+            "val_dice": dice_mean
+            }
+        log = pd.DataFrame(log)
+        log.to_csv("log/{}.csv".format(model_name))
     
 
 if __name__ == "__main__":
