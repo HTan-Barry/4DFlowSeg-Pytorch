@@ -13,9 +13,9 @@ import argparse
 import glob
 import tqdm
 
-def rel_err(data_dir, 
-            mask_dir, 
-            csv_dir,
+def rel_err(data_dir='result/4DFlowNetV1_epoch_402/',
+            mask_dir='Data/test_mask_0.9/', 
+            csv_dir='./log/4DFlowNetV1_epoch_402_mask_0.9',
             epsilon=1e-5):
     # Create the dataset and dataLoader for testing
     print(f"data_dir: {data_dir} \n mask_dir: {mask_dir} \n ")
@@ -27,10 +27,10 @@ def rel_err(data_dir,
     for i in range(num_sample):
 
         path_img = sorted(glob.glob(f"{data_dir}/{i}_*.npy"))
+
         mask = np.load(f"{mask_dir}/label-{i}.npy")[-1]
         img = {}
         for j, col in enumerate(col_list):
-            print(j, len(path_img))
             img[col] = np.load(path_img[j])
         numerator = np.square(img["pred_x"]-img["lab_x"])+np.square(img["pred_y"]-img['lab_y'])+np.square(img["pred_z"]-img["lab_z"])
         denominator = np.square(img["lab_x"])+np.square(img["lab_y"])+np.square(img["lab_z"])
@@ -92,12 +92,13 @@ def rel_err(data_dir,
 #     return err
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Inference")
-    parser.add_argument("--data_dir", type=str, default='./result/4DFlowNetV1_epoch_402')
-    parser.add_argument("--mask_dir", type=str, default='./Data/test_mask_0.1/')
-    parser.add_argument("--csv_dir", type=str, default='./log/4DFlowNetV1_epoch_402_mask_0.1')
+    # parser = argparse.ArgumentParser(description="Inference")
+    # parser.add_argument("--data_dir", type=str, default='./result/4DFlowNetV1_epoch_402')
+    # parser.add_argument("--mask_dir", type=str, default='./Data/test_mask_0.1/')
+    # parser.add_argument("--csv_dir", type=str, default='./log/4DFlowNetV1_epoch_402_mask_0.1')
 
-    args = parser.parse_args()
-    rel_err(data_dir=args.data_dir, 
-                 mask_dir=args.mask_dir, 
-                 csv_dir=args.csv_dir,)
+    # args = parser.parse_args()
+    # rel_err(data_dir=args.data_dir, 
+    #              mask_dir=args.mask_dir, 
+    #              csv_dir=args.csv_dir,)
+    rel_err()
