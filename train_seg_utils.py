@@ -32,8 +32,10 @@ def dice_coeff(pred, target):
  
     return (2. * intersection + smooth) / (m1.sum() + m2.sum() + smooth)
 
-def train_session(model_name="FlowSeg_lr0.0001_step10000_tanh_CE_V1",
-                  batch_size=40,
+def train_session(model_name="FlowSeg_lr0.0001_step10000_mask_0.6_tanh_CE_V1",
+                  train_dir = 'Data/train_mask_0.6/',
+                  val_dir = 'Data/val_mask_0.6/',
+                  batch_size=50,
                   num_workers=1,
                   epochs=402,
                   initial_learning_rate=1e-4,
@@ -41,29 +43,30 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_tanh_CE_V1",
                   low_resblock=8,
                   hi_resblock=4,
                   last_act='tanh',
-                  log_path='./checkpoints',
-                  net_path= None,
+                  log_path='./log',
+                  continue_train= False,
                   step_size=10000,
                   gamma=0.7071067,
                   loss = "CE"
                   ):
-    path_cp = '{}/{}'.format(log_path, model_name+'-seg')
+    path_cp = '{}/{}'.format('./checkpoints', model_name+'-seg')
     mkdir(path_cp)
 
     # Create the dataset and dataLoader for training, validating
-    trainset = Dataset4DFlowNet(data_dir='Data/train/')
-    valset = Dataset4DFlowNet(data_dir='Data/val/')
+    trainset = Dataset4DFlowNet(data_dir=train_dir)
+    valset = Dataset4DFlowNet(data_dir=val_dir)
     trainloader = DataLoader(trainset, batch_size=batch_size, num_workers=num_workers, shuffle=True)
     valloader = DataLoader(valset, batch_size=1, num_workers=num_workers, shuffle=False)
 
     # Initialize the network, loss function and Optimizer
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    # device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     
     net = FlowSeg(res_increase=res_increase,
                   num_low_res=low_resblock,
                   num_hi_res=hi_resblock,
                   last_act=last_act)
-    net = net.to(device)
+    net = nn.DataParallel(net)
+    net = net.cuda()
 
     # Initialize the parameters
     # for m in net.modules():
@@ -80,9 +83,9 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_tanh_CE_V1",
         loss_ce = DiceLoss()
     elif loss == "FO":
         loss_ce = FocalLoss()
-    loss_ce = loss_ce.to(device)
-    loss_mse = loss_mse.to(device)
-    loss_div = loss_div.to(device)
+    loss_ce = loss_ce.cuda()
+    loss_mse = loss_mse.cuda()
+    loss_div = loss_div.cuda()
 
     learning_rate = initial_learning_rate
     optimizer = optim.Adam(net.parameters(), learning_rate)
@@ -90,8 +93,8 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_tanh_CE_V1",
 
     # Load the network be trained previously
     start = 0
-    if net_path:
-        checkpoint = torch.load(net_path,
+    if continue_train:
+        checkpoint = torch.load(f"./checkpoints/{model_name}/latest.pt",
                                 map_location=torch.device(device))
         net.load_state_dict(checkpoint['net'])
         scheduler.load_state_dict((checkpoint['scheduler']))
@@ -99,7 +102,7 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_tanh_CE_V1",
 
     # Training session
     print('Num of Epoch: ', epochs)
-    print("Network:", net)
+    # print("Network:", net)
     print("Initialize lr: ", optimizer.param_groups[0]["lr"])
     train_loss_mean = []
     val_loss_mean = []
@@ -110,9 +113,9 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_tanh_CE_V1",
         dice = []
         net.train()
         for i, (data, label, mask_label) in enumerate(trainloader, 0):
-            data = data.to(device)
-            label = label.to(device)
-            mask_label = mask_label.to(device)
+            data = data.cuda()
+            label = label.cuda()
+            mask_label = mask_label.cuda()
             if data.shape[-1] != 16 or data.shape[-2] != 16 or data.shape[3] != 16:
                 print(i, data.shape, label.shape)
             # zero the gradient
@@ -142,9 +145,9 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_tanh_CE_V1",
         net.eval()
         for i, (data, label, mask_label) in enumerate(valloader, 0):
 
-            data = data.to(device)
-            label = label.to(device)
-            mask_label = mask_label.to(device)
+            data = data.cuda()
+            label = label.cuda()
+            mask_label = mask_label.cuda()
 
             # network prediction
             pred, mask = net(data)
@@ -165,6 +168,12 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_tanh_CE_V1",
                                                                                   np.mean(train_loss),
                                                                                   np.mean(val_loss), np.mean(dice)),
               end='\n')
+        torch.save({'epoch': epoch + 1,
+                        'net': net.state_dict(),
+                        'optimizer': optimizer.state_dict(),
+                        'scheduler': scheduler.state_dict(),
+                        },
+                       '{}/latest.pt'.format(path_cp))
         if epoch % 10 == 1:
             # Save the Network
             torch.save({'epoch': epoch + 1,
@@ -183,4 +192,36 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_tanh_CE_V1",
     
 
 if __name__ == "__main__":
-    train_session()
+    parser = argparse.ArgumentParser(description="train_seg")
+    parser.add_argument("--model_name", type=str, default="FlowSeg_lr0.0001_step10000_mask_0.6_tanh_CE_V1")
+    parser.add_argument("--train_dir", type=str, default='./Data/train_mask_0.6/')
+    parser.add_argument("--val_dir", type=str, default='./Data/val_mask_0.6/')
+    parser.add_argument("--loss", type=str, default='CE')
+    parser.add_argument("--batch_size", type=int, default=50)    
+    parser.add_argument("--num_workers", type=int, default=4)
+    parser.add_argument("--epochs", type=int, default=402)
+    parser.add_argument("--lr", type=int, default=1e-4)
+    parser.add_argument("--res_increase", type=int, default=2)
+    parser.add_argument("--step_size", type=int, default=10000)
+    parser.add_argument("--gamma", type=int, default=0.7071067)
+    parser.add_argument("--continue", type=bool, default=False)
+
+
+    args = parser.parse_args()
+    train_session(model_name=args.model_name,
+                  train_dir = args.train_dir,
+                  val_dir = args.val_dir,
+                  batch_size=args.batch_size,
+                  num_workers=args.num_workers,
+                  epochs=args.epochs,
+                  initial_learning_rate=args.lr,
+                  res_increase=args.res_increase,
+                  low_resblock=8,
+                  hi_resblock=4,
+                  last_act=args.last_act,
+                  log_path='./log',
+                  continue_train=args.continue_train,
+                  step_size=args.step_size,
+                  gamma=args.gamma,
+                  loss =args.loss
+                  )
