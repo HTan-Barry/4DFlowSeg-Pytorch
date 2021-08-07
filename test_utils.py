@@ -6,12 +6,14 @@ import time
 import shutil
 import os
 from FlowNet_Pytorch import FlowNet
+from FlowSeg import FlowSeg
 from Data_prep import Create_DataLoader
 from Gradient_Loss import *
 from Dataset_Creater import *
 import argparse
+from collections import OrderedDict
 
-def Test_session(net_path=None,
+def Test_session(net_path="checkpoints/FlowSeg_lr0.0001_step10000_mask_0.1_tanh_CE_V1-seg/latest.pt",
                  data_dir='./Data/test/',
                  epsilon = 1e-5,
                  save_image=False,
@@ -27,14 +29,20 @@ def Test_session(net_path=None,
     # Initialize the network, loss function and Optimizer
     # device = 'cuda' if torch.cuda.is_available() else 'cpu'
     device = 'cpu'
-    net = FlowNet()
+    net = FlowSeg()
     net = net.to(device)
     print('num of sample: ', len(testset))
 
     if net_path:
-        checkpoint = torch.load(net_path,
-                                map_location=torch.device(device))
-        net.load_state_dict(checkpoint['net'])
+        # checkpoint = torch.load(net_path, map_location="cpu")
+        # net.load_state_dict(checkpoint['net'])
+
+        new_state_dict = OrderedDict()
+        for key, value in torch.load(net_path)["net"].items(): 
+
+            name = key[7:] 
+            new_state_dict[name] = value
+        net.load_state_dict(new_state_dict)
     else:
         raise NotImplementedError('Need a trained network')
 
@@ -72,6 +80,7 @@ def rel_err(pred, label, epsilon, is_save_image, save_root_path, idx):
     label: ref result, size: (4, x, y, z)
     Equation of relative error:
     '''
+    print(pred.shape, label.shape)
     pred_x, pred_y, pred_z = pred[:,0,:,:,:].detach().numpy(), pred[:,1,:,:,:].detach().numpy(), pred[:,2,:,:,:].detach().numpy()
     lab_x, lab_y, lab_z = label[:,0,:,:,:].detach().numpy(), label[:,1,:,:,:].detach().numpy(), label[:,2,:,:,:].detach().numpy()
     if is_save_image:
@@ -90,7 +99,7 @@ def rel_err(pred, label, epsilon, is_save_image, save_root_path, idx):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Inference")
-    parser.add_argument("--checkpoint", type=str, default='./checkpoints/4DFlowNetV1/epoch402.pt')
+    parser.add_argument("--checkpoint", type=str, default='checkpoints/FlowSeg_lr0.0001_step10000_mask_0.4_tanh_CE_V1-seg/epoch402.pt')
     parser.add_argument("--data_dir", type=str, default='./Data/test_mask_0.6/')
     parser.add_argument("--save_image", type=bool, default=False)
     parser.add_argument("--csv_dir", type=str)

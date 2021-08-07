@@ -10,6 +10,8 @@ from FlowSeg import FlowSeg
 from Gradient_Loss import *
 from Dataset_Creater import *
 from Loss import DiceLoss, FocalLoss
+import argparse
+from collections import OrderedDict
 
 
 def mkdir(path):
@@ -32,6 +34,26 @@ def dice_coeff(pred, target):
  
     return (2. * intersection + smooth) / (m1.sum() + m2.sum() + smooth)
 
+class DiceLoss(nn.Module):
+    def __init__(self):
+        super(DiceLoss, self).__init__()
+        self.epsilon = 1e-5
+    
+    def forward(self, predict, target):
+        assert predict.size() == target.size(), "the size of predict and target must be equal."
+        num = predict.size(0)
+        
+        pre = torch.sigmoid(predict).view(num, -1)
+        tar = target.view(num, -1)
+        
+        intersection = (pre * tar).sum(-1).sum()  
+        union = (pre + tar).sum(-1).sum()
+        
+        score = 1 - 2 * (intersection + self.epsilon) / (union + self.epsilon)
+        
+        return score
+
+
 def train_session(model_name="FlowSeg_lr0.0001_step10000_mask_0.6_tanh_CE_V1",
                   train_dir = 'Data/train_mask_0.6/',
                   val_dir = 'Data/val_mask_0.6/',
@@ -45,12 +67,13 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_mask_0.6_tanh_CE_V1",
                   last_act='tanh',
                   log_path='./log',
                   continue_train= False,
-                  step_size=10000,
+                  step_size=1000,
                   gamma=0.7071067,
                   loss = "CE"
                   ):
     path_cp = '{}/{}'.format('./checkpoints', model_name+'-seg')
     mkdir(path_cp)
+    print("continue_train", continue_train)
 
     # Create the dataset and dataLoader for training, validating
     trainset = Dataset4DFlowNet(data_dir=train_dir)
@@ -65,8 +88,7 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_mask_0.6_tanh_CE_V1",
                   num_low_res=low_resblock,
                   num_hi_res=hi_resblock,
                   last_act=last_act)
-    net = nn.DataParallel(net)
-    net = net.cuda()
+
 
     # Initialize the parameters
     # for m in net.modules():
@@ -94,12 +116,19 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_mask_0.6_tanh_CE_V1",
     # Load the network be trained previously
     start = 0
     if continue_train:
-        checkpoint = torch.load(f"./checkpoints/{model_name}/latest.pt",
-                                map_location=torch.device(device))
-        net.load_state_dict(checkpoint['net'])
+        new_state_dict = OrderedDict()
+        for key, value in torch.load("checkpoints/FlowSeg_lr0.0001_step10000_mask_0.5_tanh_CE_V2-seg/epoch2502.pt")["net"].items(): 
+
+            name = key[7:] 
+            new_state_dict[name] = value
+        net.load_state_dict(new_state_dict)
+        checkpoint = torch.load("checkpoints/FlowSeg_lr0.0001_step10000_mask_0.5_tanh_CE_V2-seg/epoch2502.pt")
         scheduler.load_state_dict((checkpoint['scheduler']))
         start = checkpoint['epoch']
-
+    
+    net = nn.DataParallel(net)
+    net = net.cuda()
+    
     # Training session
     print('Num of Epoch: ', epochs)
     # print("Network:", net)
@@ -107,6 +136,7 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_mask_0.6_tanh_CE_V1",
     train_loss_mean = []
     val_loss_mean = []
     dice_mean = []
+    print("iter for each epoch: {}".format(len(trainloader)))
     for epoch in range(start, epochs):
         train_loss = []
         val_loss = []
@@ -188,7 +218,7 @@ def train_session(model_name="FlowSeg_lr0.0001_step10000_mask_0.6_tanh_CE_V1",
             "val_dice": dice_mean
             }
         log = pd.DataFrame(log)
-        log.to_csv("log/{}.csv".format(model_name))
+        log.to_csv("train_log/{}.csv".format(model_name))
     
 
 if __name__ == "__main__":
@@ -200,11 +230,12 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=50)    
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--epochs", type=int, default=402)
-    parser.add_argument("--lr", type=int, default=1e-4)
+    parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--res_increase", type=int, default=2)
-    parser.add_argument("--step_size", type=int, default=10000)
+    parser.add_argument("--step_size", type=int, default=1000)
     parser.add_argument("--gamma", type=int, default=0.7071067)
-    parser.add_argument("--continue", type=bool, default=False)
+    parser.add_argument("--continue_train", action='store_true')
+    parser.add_argument("--last_act", type=str, default='tanh')
 
 
     args = parser.parse_args()
